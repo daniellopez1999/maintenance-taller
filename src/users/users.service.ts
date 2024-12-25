@@ -3,13 +3,14 @@ import {
   decryptToken,
   encryptToken,
   generateUrlWithEncryptedToken,
-} from './utilts';
+} from './utils/utilts';
 import {
   Injectable,
   ConflictException,
   BadRequestException,
   NotFoundException,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryRunner, getConnection, DataSource } from 'typeorm';
@@ -19,6 +20,9 @@ import { ConfirmPasswordDto } from './dto/confirm-password.dto';
 import { UserStatus } from './entities/user.entity';
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
+import { LoginUserDto } from './dto/login.dto';
+import { ShortUserResponse } from './utils/user';
+import * as CONFIG_FILE from './config.json';
 
 @Injectable()
 export class UsersService {
@@ -58,6 +62,9 @@ export class UsersService {
       const temporalURL = generateUrlWithEncryptedToken(savedUser.user_id);
 
       await queryRunner.commitTransaction();
+
+      //TODO: Send email with temporalURL
+
       return { savedUser, temporalURL };
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -126,5 +133,32 @@ export class UsersService {
       this.logger.error('Error resending confirmation password', error.stack);
       throw error;
     }
+  }
+
+  async login(loginUserDto: LoginUserDto) {
+    const { email, password } = loginUserDto;
+
+    const user = await this.usersRepository.findOne({
+      where: { email: email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const token = jwt.sign(
+      { userId: user.user_id, email: user.email },
+      envs.SECRET_KEY,
+      { expiresIn: CONFIG_FILE.LOGIN_EXPIRATION_TIME },
+    );
+
+    const userInstance = new ShortUserResponse(user);
+
+    return { token, userInstance };
   }
 }
