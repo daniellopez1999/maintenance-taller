@@ -24,4 +24,9 @@ export class UsersController {
   confirmPassword(@Body() confirmPasswordDto: ConfirmPasswordDto) {
     return this.usersService.confirmPassword(confirmPasswordDto);
   }
+
+  @Post('resend-email')
+  resendConfirmationPassword(@Body() user_id: string) {
+    return this.usersService.resendConfirmationPassword(user_id);
+  }
 }

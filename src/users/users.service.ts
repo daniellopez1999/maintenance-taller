@@ -1,5 +1,9 @@
 import { envs } from 'src/config';
-import { decryptToken, encryptToken } from './utilts';
+import {
+  decryptToken,
+  encryptToken,
+  generateUrlWithEncryptedToken,
+} from './utilts';
 import {
   Injectable,
   ConflictException,
@@ -13,8 +17,8 @@ import { UsersEntity } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ConfirmPasswordDto } from './dto/confirm-password.dto';
 import { UserStatus } from './entities/user.entity';
-import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class UsersService {
@@ -51,16 +55,10 @@ export class UsersService {
 
       const savedUser = await queryRunner.manager.save(UsersEntity, user);
 
-      const token = jwt.sign({ userId: savedUser.user_id }, envs.SECRET_KEY, {
-        expiresIn: '1h',
-      });
-
-      const encryptedToken = encryptToken(token);
-
-      const tempUrl = `${envs.URL_DOMAIN}/confirm-password?token=${encryptedToken}`;
+      const temporalURL = generateUrlWithEncryptedToken(savedUser.user_id);
 
       await queryRunner.commitTransaction();
-      return { savedUser, tempUrl };
+      return { savedUser, temporalURL };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       this.logger.error('Error creating user', error.stack);
@@ -117,6 +115,16 @@ export class UsersService {
       throw error;
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  async resendConfirmationPassword(user_id: string) {
+    try {
+      const temporalURL = generateUrlWithEncryptedToken(user_id);
+      return temporalURL;
+    } catch (error) {
+      this.logger.error('Error resending confirmation password', error.stack);
+      throw error;
     }
   }
 }

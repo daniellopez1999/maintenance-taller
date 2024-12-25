@@ -1,5 +1,6 @@
 import * as crypto from 'crypto';
 import { envs } from 'src/config';
+import * as jwt from 'jsonwebtoken';
 
 const key = crypto
   .createHash('sha256')
@@ -23,4 +24,12 @@ export function decryptToken(token: any): string {
   let decryptedToken = decipher.update(encryptedText, 'hex', 'utf8');
   decryptedToken += decipher.final('utf8');
   return decryptedToken;
+}
+
+export function generateUrlWithEncryptedToken(userId: string): string {
+  const token = jwt.sign({ userId: userId }, envs.SECRET_KEY, {
+    expiresIn: '1h',
+  });
+  const encryptedToken = encryptToken(token);
+  return `${envs.FRONTEND_URL}/confirm-password?token=${encryptedToken}`;
 }
