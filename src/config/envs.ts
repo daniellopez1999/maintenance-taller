@@ -7,6 +7,8 @@ interface EnvVars {
   DATABASE_USERS_PASSWORD: string;
   DATABASE_USERS_HOST: string;
   DATABASE_USERS_PORT: number;
+  SECRET_KEY: string;
+  URL_DOMAIN: string;
 }
 
 const envsSchema = joi.object({
@@ -16,6 +18,8 @@ const envsSchema = joi.object({
   DATABASE_USERS_PASSWORD: joi.string().required(),
   DATABASE_USERS_HOST: joi.string().required(),
   DATABASE_USERS_PORT: joi.number().required(),
+  SECRET_KEY: joi.string().required(),
+  URL_DOMAIN: joi.string().required(),
 });
 
 const { error, value } = envsSchema.validate(process.env, {
@@ -35,4 +39,6 @@ export const envs = {
   DATABASE_USERS_PASSWORD: envVars.DATABASE_USERS_PASSWORD,
   DATABASE_USERS_HOST: envVars.DATABASE_USERS_HOST,
   DATABASE_USERS_PORT: envVars.DATABASE_USERS_PORT,
+  SECRET_KEY: envVars.SECRET_KEY,
+  URL_DOMAIN: envVars.URL_DOMAIN,
 };

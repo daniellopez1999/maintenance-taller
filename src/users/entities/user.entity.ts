@@ -12,10 +12,16 @@ export enum Role {
   USER = 'user',
 }
 
+export enum UserStatus {
+  REGISTERING = 'REGISTERING',
+  REGISTERED = 'REGISTERED',
+  DISABLED = 'DISABLED',
+}
+
 @Entity('users')
 export class UsersEntity {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  user_id: string;
 
   @Column({ type: 'varchar', length: 255, unique: true })
   email: string;
@@ -30,8 +36,11 @@ export class UsersEntity {
   })
   role: Role;
 
-  @Column({ type: 'varchar', length: 255 })
-  password: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  password: string | null;
+
+  @Column({ type: 'enum', enum: UserStatus, default: UserStatus.REGISTERING })
+  status: UserStatus;
 
   @CreateDateColumn()
   created_at: Date;
