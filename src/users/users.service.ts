@@ -23,6 +23,7 @@ import * as jwt from 'jsonwebtoken';
 import { LoginUserDto } from './dto/login.dto';
 import { ShortUserResponse } from './utils/user';
 import * as CONFIG_FILE from './config.json';
+import { GetUsersDto } from './dto/get-users.dto';
 
 @Injectable()
 export class UsersService {
@@ -133,6 +134,28 @@ export class UsersService {
       this.logger.error('Error resending confirmation password', error.stack);
       throw error;
     }
+  }
+
+  async findUsers(getUsersDTO: GetUsersDto) {
+    const { search, limit, page } = getUsersDTO;
+
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.usersRepository.createQueryBuilder('user');
+
+    if (search) {
+      queryBuilder.where('user.name LIKE :search OR user.email LIKE :search', {
+        search: `%${search}%`,
+      });
+    }
+
+    queryBuilder.take(limit);
+    queryBuilder.skip(skip);
+
+    const users = await queryBuilder.getMany();
+
+    const usersMapped = users.map((user) => new ShortUserResponse(user));
+    return usersMapped;
   }
 
   async login(loginUserDto: LoginUserDto) {
