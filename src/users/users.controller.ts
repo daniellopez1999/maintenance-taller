@@ -6,20 +6,23 @@ import {
   Patch,
   Param,
   Delete,
+  Logger,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { GetUsersDto } from './dto/get-users.dto';
 import { ConfirmPasswordDto } from './dto/confirm-password.dto';
 import { MessagePattern, Payload } from '@nestjs/microservices';
+import { log } from 'console';
 
+const logger = new Logger(UsersService.name);
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @MessagePattern({ cmd: 'create_user' })
-  create(@Payload() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  async create(@Payload() createUserDto: CreateUserDto) {
+    return await this.usersService.create(createUserDto);
   }
 
   @Post('confirm-password')
@@ -32,8 +35,9 @@ export class UsersController {
     return this.usersService.resendConfirmationPassword(user_id);
   }
 
-  @MessagePattern({ cmd: 'get_users' })
+  @MessagePattern({ cmd: 'get-users' })
   findUsers(@Payload() getUsersDTO: GetUsersDto) {
+    logger.log(getUsersDTO);
     return this.usersService.findUsers(getUsersDTO);
   }
 }

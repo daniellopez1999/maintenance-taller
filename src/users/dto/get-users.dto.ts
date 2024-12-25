@@ -1,5 +1,5 @@
 import { IsOptional, IsString, IsInt, Min } from 'class-validator';
-
+import { Type } from 'class-transformer';
 export class GetUsersDto {
   @IsOptional()
   @IsString()
@@ -8,10 +8,12 @@ export class GetUsersDto {
   @IsOptional()
   @IsInt()
   @Min(1)
+  @Type(() => Number)
   limit?: number;
 
   @IsOptional()
   @IsInt()
-  @Min(0)
+  @Min(1)
+  @Type(() => Number)
   page?: number;
 }

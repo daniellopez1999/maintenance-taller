@@ -8,7 +8,10 @@ async function bootstrap() {
   const logger = new Logger('Main');
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     AppModule,
-    { transport: Transport.TCP, options: { port: envs.PORT } },
+    {
+      transport: Transport.TCP,
+      options: { port: envs.PORT, host: 'localhost' },
+    },
   );
 
   app.useGlobalPipes(
@@ -17,6 +20,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+  await app.listen();
 
   logger.log(`Users Microservice running on port ${envs.PORT}`);
 }
