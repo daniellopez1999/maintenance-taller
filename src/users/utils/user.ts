@@ -5,7 +5,9 @@ export class ShortUserResponse {
   email: string;
   role: Role;
   status: UserStatus;
-  constructor({ name, email, role, status }) {
+  user_id: string;
+  constructor({ name, email, role, status, user_id }) {
+    this.user_id = user_id;
     this.name = name;
     this.email = email;
     this.role = role;

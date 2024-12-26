@@ -35,6 +35,11 @@ export class UsersController {
     return this.usersService.resendConfirmationPassword(user_id);
   }
 
+  @MessagePattern({ cmd: 'get-user' })
+  findUserById(@Payload() user_id: string) {
+    return this.usersService.findUserById(user_id);
+  }
+
   @MessagePattern({ cmd: 'get-users' })
   findUsers(@Payload() getUsersDTO: GetUsersDto) {
     logger.log(getUsersDTO);

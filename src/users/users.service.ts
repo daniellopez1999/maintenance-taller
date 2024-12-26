@@ -11,6 +11,7 @@ import {
   NotFoundException,
   Logger,
   UnauthorizedException,
+  HttpStatus,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryRunner, getConnection, DataSource } from 'typeorm';
@@ -24,6 +25,7 @@ import { LoginUserDto } from './dto/login.dto';
 import { ShortUserResponse } from './utils/user';
 import * as CONFIG_FILE from './config.json';
 import { GetUsersDto } from './dto/get-users.dto';
+import { RpcException } from '@nestjs/microservices';
 
 @Injectable()
 export class UsersService {
@@ -69,8 +71,10 @@ export class UsersService {
       return { savedUser, temporalURL };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      this.logger.error('Error creating user', error.stack);
-      throw error;
+      throw new RpcException({
+        status: error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+        message: error.message || 'Error creating user',
+      });
     } finally {
       await queryRunner.release();
     }
@@ -84,9 +88,10 @@ export class UsersService {
     try {
       const { password, confirmPassword, token } = confirmPasswordDto;
       if (password !== confirmPassword) {
-        throw new BadRequestException(
-          'Password and Confirm Password must be the same',
-        );
+        throw new RpcException({
+          status: HttpStatus.BAD_REQUEST,
+          message: 'Password and Confirm Password must be the same',
+        });
       }
 
       const decryptedToken = decryptToken(token);
@@ -102,11 +107,17 @@ export class UsersService {
         where: { user_id: decoded.userId },
       });
       if (!user) {
-        throw new NotFoundException('User not found');
+        throw new RpcException({
+          status: HttpStatus.NOT_FOUND,
+          message: 'User not found',
+        });
       }
 
       if (user.status !== UserStatus.REGISTERING) {
-        throw new BadRequestException('User already registered');
+        throw new RpcException({
+          status: HttpStatus.CONFLICT,
+          message: 'User already registered',
+        });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -119,21 +130,18 @@ export class UsersService {
       return updatedUser;
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      this.logger.error('Error confirming password', error.stack);
-      throw error;
+      throw new RpcException({
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: 'Error confirming password',
+      });
     } finally {
       await queryRunner.release();
     }
   }
 
   async resendConfirmationPassword(user_id: string) {
-    try {
-      const temporalURL = generateUrlWithEncryptedToken(user_id);
-      return temporalURL;
-    } catch (error) {
-      this.logger.error('Error resending confirmation password', error.stack);
-      throw error;
-    }
+    const temporalURL = generateUrlWithEncryptedToken(user_id);
+    return temporalURL;
   }
 
   async findUsers(getUsersDTO: GetUsersDto) {
@@ -158,6 +166,23 @@ export class UsersService {
     return usersMapped;
   }
 
+  async findUserById(user_id: string) {
+    const user = await this.usersRepository.findOne({
+      where: { user_id: user_id },
+    });
+
+    if (!user) {
+      throw new RpcException({
+        message: 'User not found',
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    const userInstance = new ShortUserResponse(user);
+
+    return userInstance;
+  }
+
   async login(loginUserDto: LoginUserDto) {
     const { email, password } = loginUserDto;
 
@@ -166,12 +191,18 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new RpcException({
+        status: HttpStatus.UNAUTHORIZED,
+        message: 'Invalid Credentials',
+      });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new RpcException({
+        status: HttpStatus.UNAUTHORIZED,
+        message: 'Invalid Credentials',
+      });
     }
 
     const token = jwt.sign(
